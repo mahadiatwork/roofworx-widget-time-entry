@@ -1,0 +1,23 @@
+{
+  "name": "roofworx-time-entry-widget",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "widget:sync": "node scripts/sync-widget-dist.mjs",
+    "widget:build": "npm run build && npm run widget:sync"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.11",
+    "@vitejs/plugin-react": "^4.6.0",
+    "tailwindcss": "^4.1.11",
+    "vite": "^7.0.4"
+  }
+}
