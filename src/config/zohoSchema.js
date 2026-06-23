@@ -7,7 +7,10 @@
 
 export const zohoSchema = {
   /** API name of the custom Time Entry module */
-  timeEntryModule: "Time_Entry",
+  timeEntryModule: "Time_Sheets",
+
+  /** API name of the module where this widget is opened */
+  portalUserModule: "Portal_Users",
 
   /** API name of the Jobs / Deals module */
   jobsModule: "Deals",
@@ -45,6 +48,14 @@ export const zohoSchema = {
     syncStatus: "Sync_Status",
     /** Display name of the job (denormalized, if your module has it) */
     jobName: "Job_Name",
+    /** Optional lookup to the opened portal user/module record */
+    portalUser: null,
+  },
+
+  /** Opened portal user/module record field API names */
+  portalUserFields: {
+    /** Field to show in the widget header; supports plain text or lookup object */
+    displayName: "Name",
   },
 
   /** Jobs / Deals field API names */
@@ -83,7 +94,12 @@ export const zohoSchema = {
   historyDays: 30,
 
   /** Widget placement — used for PageLoad context validation */
-  expectedJobModule: "Deals",
+  expectedJobModule: "Portal_Users",
+
+  /** Related list API name for the opened module record; fill in when known */
+  relatedList: {
+    apiName: "Time_Sheets",
+  },
 
   /**
    * If crew assignments live in a linking module instead of a lookup on Deals,

@@ -1,8 +1,16 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-export default function JobPicker({ jobs, value, onChange, disabled = false }) {
+export default function JobPicker({
+  jobs,
+  value,
+  onChange,
+  onSearch,
+  disabled = false,
+}) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -16,7 +24,37 @@ export default function JobPicker({ jobs, value, onChange, disabled = false }) {
     );
   }, [jobs, query]);
 
-  const selected = jobs.find((j) => j.id === value?.id) ?? value;
+  useEffect(() => {
+    const q = query.trim();
+    if (!onSearch || q.length < 2) {
+      setSearching(false);
+      setSearchResults([]);
+      return;
+    }
+
+    let cancelled = false;
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const results = await onSearch(q);
+        if (!cancelled) setSearchResults(results);
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [onSearch, query]);
+
+  const showingSearchResults = !!onSearch && query.trim().length >= 2;
+  const options = showingSearchResults ? searchResults : filtered;
+  const selected =
+    jobs.find((j) => j.id === value?.id) ??
+    searchResults.find((j) => j.id === value?.id) ??
+    value;
 
   return (
     <div className="relative">
@@ -71,15 +109,23 @@ export default function JobPicker({ jobs, value, onChange, disabled = false }) {
             />
           </div>
           <ul className="max-h-48 overflow-y-auto py-1">
-            {filtered.length === 0 && (
+            {searching && (
               <li
                 className="px-3 py-2 text-sm"
                 style={{ color: "var(--muted-foreground)" }}
               >
-                No jobs found
+                Searching…
               </li>
             )}
-            {filtered.map((job) => (
+            {!searching && options.length === 0 && (
+              <li
+                className="px-3 py-2 text-sm"
+                style={{ color: "var(--muted-foreground)" }}
+              >
+                No deals found
+              </li>
+            )}
+            {!searching && options.map((job) => (
               <li key={job.id}>
                 <button
                   type="button"

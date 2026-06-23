@@ -5,9 +5,11 @@ import {
   resizeWidget,
   isZohoReady,
 } from "./lib/zohoClient.js";
-import { getRecordId } from "./lib/zohoPageContext.js";
+import { getModuleName, getRecordId } from "./lib/zohoPageContext.js";
 import {
   fetchCurrentUser,
+  fetchOpenedRecord,
+  fetchRelatedHistory,
   fetchAssignedJobs,
   fetchHistory,
   fetchOpenEntry,
@@ -15,6 +17,7 @@ import {
   closeOpenEntry,
   retrySync,
   getWeeklyHours,
+  searchDeals,
 } from "./lib/timeEntryService.js";
 import {
   calculateTotalHours,
@@ -32,6 +35,11 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
+  const [pageContext, setPageContext] = useState({
+    moduleName: null,
+    recordId: null,
+  });
+  const [openedRecord, setOpenedRecord] = useState(null);
   const [jobs, setJobs] = useState([]);
   const [prefilledJob, setPrefilledJob] = useState(null);
   const [history, setHistory] = useState([]);
@@ -48,10 +56,24 @@ export default function App() {
 
   const userId = user?.id ?? user?.ID ?? null;
 
-  const refreshData = useCallback(async (uid, jobId) => {
+  const loadOpenedContext = useCallback(async (pageLoad) => {
+    const context = {
+      moduleName: getModuleName(pageLoad),
+      recordId: getRecordId(pageLoad),
+    };
+    setPageContext(context);
+
+    const record = await fetchOpenedRecord(context.moduleName, context.recordId);
+    setOpenedRecord(record);
+    return context;
+  }, []);
+
+  const refreshData = useCallback(async (uid, jobId, context = {}) => {
     const [jobList, hist, open] = await Promise.all([
       fetchAssignedJobs(uid, jobId),
-      fetchHistory(uid),
+      context.recordId
+        ? fetchRelatedHistory(context.moduleName, context.recordId)
+        : fetchHistory(uid),
       fetchOpenEntry(uid),
     ]);
     setJobs(jobList);
@@ -75,8 +97,10 @@ export default function App() {
           const mockUser = await fetchCurrentUser();
           if (cancelled) return;
           setUser(mockUser);
-          const jobId = getRecordId(mockPageLoad);
-          await refreshData(mockUser.id, jobId);
+          const context = await loadOpenedContext(mockPageLoad);
+          const jobId =
+            context.moduleName === zohoSchema.jobsModule ? context.recordId : null;
+          await refreshData(mockUser.id, jobId, context);
           if (cancelled) return;
           setLoading(false);
           return;
@@ -84,15 +108,17 @@ export default function App() {
 
         await initZoho(async (pageLoad) => {
           if (cancelled) return;
-          resizeWidget("100%", "100%");
+          resizeWidget("100%", "540px");
 
           const currentUser = await fetchCurrentUser();
           if (cancelled) return;
           setUser(currentUser);
 
           const uid = currentUser?.id ?? currentUser?.ID;
-          const jobId = getRecordId(pageLoad);
-          await refreshData(uid, jobId);
+          const context = await loadOpenedContext(pageLoad);
+          const jobId =
+            context.moduleName === zohoSchema.jobsModule ? context.recordId : null;
+          await refreshData(uid, jobId, context);
           if (cancelled) return;
           setLoading(false);
         });
@@ -109,7 +135,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [refreshData]);
+  }, [loadOpenedContext, refreshData]);
 
   async function handleSubmit(formData) {
     setSubmitting(true);
@@ -118,6 +144,10 @@ export default function App() {
       const result = await createTimeEntry({
         ...formData,
         userId,
+        portalUserId:
+          pageContext.moduleName === zohoSchema.portalUserModule
+            ? pageContext.recordId
+            : null,
         status: "closed",
       });
 
@@ -131,7 +161,7 @@ export default function App() {
         crmId: result.id,
       });
       setActiveTab("entry");
-      await refreshData(userId, prefilledJob?.id);
+      await refreshData(userId, prefilledJob?.id, pageContext);
     } catch (err) {
       console.error(err);
       setError("Something went wrong while saving. Please try again.");
@@ -168,7 +198,7 @@ export default function App() {
       }
       setOpenEntry(null);
       setShowOpenClock(false);
-      await refreshData(userId, prefilledJob?.id);
+      await refreshData(userId, prefilledJob?.id, pageContext);
     } catch (err) {
       console.error(err);
       setCloseError("Failed to close entry. Please try again.");
@@ -184,7 +214,7 @@ export default function App() {
       if (!result.ok) {
         setError(result.error ?? "Sync failed.");
       }
-      await refreshData(userId, prefilledJob?.id);
+      await refreshData(userId, prefilledJob?.id, pageContext);
     } catch (err) {
       console.error(err);
       setError("Sync failed. Please try again.");
@@ -195,10 +225,21 @@ export default function App() {
 
   const weeklyHours = getWeeklyHours(history);
   const showOpenBanner = openEntry && showOpenClock && !confirmation;
+  const portalNameField = zohoSchema.portalUserFields?.displayName;
+  const portalNameValue = portalNameField ? openedRecord?.[portalNameField] : null;
+  const portalName =
+    typeof portalNameValue === "object"
+      ? portalNameValue?.name
+      : portalNameValue;
+  const headerSubtitle =
+    portalName ||
+    (devMode
+      ? "Dev mode — Zoho SDK not detected"
+      : user?.full_name ?? user?.email ?? undefined);
 
   if (loading) {
     return (
-      <div className="p-4">
+      <div className="mx-auto w-full max-w-[540px] p-4">
         <WidgetHeader />
         <div
           className="mt-4 rounded-[var(--radius)] px-4 py-8 text-center text-sm"
@@ -211,14 +252,8 @@ export default function App() {
   }
 
   return (
-    <div className="mx-auto max-w-lg">
-      <WidgetHeader
-        subtitle={
-          devMode
-            ? "Dev mode — Zoho SDK not detected"
-            : user?.full_name ?? user?.email ?? undefined
-        }
-      />
+    <div className="mx-auto w-full max-w-[540px]">
+      <WidgetHeader subtitle={headerSubtitle} />
 
       <div className="space-y-4 p-4">
         {error && (
@@ -289,6 +324,7 @@ export default function App() {
                 key={prefilledJob?.id ?? "no-prefill"}
                 jobs={jobs}
                 initialJob={prefilledJob}
+                onSearchJobs={searchDeals}
                 onSubmit={handleSubmit}
                 submitting={submitting}
               />

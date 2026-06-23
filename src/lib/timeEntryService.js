@@ -1,6 +1,7 @@
 import zohoSchema from "../config/zohoSchema.js";
 import {
   getRecord,
+  getRelatedRecords,
   searchRecords,
   insertRecord,
   updateRecord,
@@ -15,6 +16,7 @@ import {
   mockCurrentUser,
   mockJobs,
   mockHistory,
+  mockOpenedRecord,
 } from "./devMocks.js";
 import { daysAgoLocal, weekStartLocal } from "./timeUtils.js";
 
@@ -77,6 +79,43 @@ export async function fetchCurrentUser() {
   if (!isZohoReady()) return mockCurrentUser;
   const user = await getCurrentUser();
   return user;
+}
+
+/** Fetch the CRM record the widget is opened on */
+export async function fetchOpenedRecord(moduleName, recordId) {
+  if (!moduleName || !recordId) return null;
+  if (!isZohoReady()) return mockOpenedRecord;
+
+  const res = await getRecord({ entity: moduleName, recordId });
+  return res?.data?.[0] ?? res ?? null;
+}
+
+/** Fetch configured related-list records for the opened module record */
+export async function fetchRelatedListRecords(moduleName, recordId) {
+  const relatedList = zohoSchema.relatedList?.apiName;
+  if (!relatedList || !moduleName || !recordId || !isZohoReady()) return [];
+
+  try {
+    const res = await getRelatedRecords({
+      entity: moduleName,
+      recordId,
+      relatedList,
+    });
+    return normalizeRecords(res);
+  } catch (err) {
+    console.warn("Related list fetch failed:", err);
+    return [];
+  }
+}
+
+/** Fetch past time entries from the opened record related list */
+export async function fetchRelatedHistory(moduleName, recordId) {
+  if (!isZohoReady()) return mockHistory;
+
+  const entries = await fetchRelatedListRecords(moduleName, recordId);
+  return entries
+    .map(mapTimeEntryRecord)
+    .sort((a, b) => (b.date > a.date ? 1 : -1));
 }
 
 /** Build criteria to filter time entries for a worker */
@@ -164,6 +203,34 @@ export async function fetchAssignedJobs(userId, prefilledJobId = null) {
   return Array.from(jobs.values());
 }
 
+/** Search Deals/jobs as the worker types */
+export async function searchDeals(query) {
+  const q = query.trim();
+  if (!q) return [];
+
+  if (!isZohoReady()) {
+    const lower = q.toLowerCase();
+    return mockJobs.filter((j) =>
+      [j.displayLabel, j.name, j.street, j.city].some((value) =>
+        value?.toLowerCase().includes(lower)
+      )
+    );
+  }
+
+  try {
+    const res = await searchRecords({
+      entity: jobsModule,
+      type: "word",
+      searchValue: q,
+      perPage: 20,
+    });
+    return normalizeRecords(res).map(mapJobRecord);
+  } catch (err) {
+    console.warn("Deal search failed:", err);
+    return [];
+  }
+}
+
 /** Fetch time entries for the last N days for a worker */
 export async function fetchHistory(userId, days = zohoSchema.historyDays) {
   if (!isZohoReady()) return mockHistory;
@@ -217,6 +284,7 @@ export async function createTimeEntry({
   totalHours,
   notes,
   userId,
+  portalUserId,
   status = "closed",
 }) {
   if (!isZohoReady()) {
@@ -242,6 +310,10 @@ export async function createTimeEntry({
 
   if (timeEntryFields.syncStatus) {
     payload[timeEntryFields.syncStatus] = "pending";
+  }
+
+  if (timeEntryFields.portalUser && portalUserId) {
+    payload[timeEntryFields.portalUser] = portalUserId;
   }
 
   const res = await insertRecord({

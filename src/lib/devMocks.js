@@ -65,6 +65,11 @@ export const mockHistory = [
 ];
 
 export const mockPageLoad = {
-  Entity: "Deals",
-  EntityId: "5865240000024572057",
+  Entity: "Portal_Users",
+  EntityId: "5865240000024572011",
+};
+
+export const mockOpenedRecord = {
+  id: "5865240000024572011",
+  Name: "Dev Worker",
 };

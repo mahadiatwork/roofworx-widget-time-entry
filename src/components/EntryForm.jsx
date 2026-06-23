@@ -10,6 +10,7 @@ import JobPicker from "./JobPicker.jsx";
 export default function EntryForm({
   jobs,
   initialJob,
+  onSearchJobs,
   onSubmit,
   submitting = false,
   disabled = false,
@@ -47,6 +48,7 @@ export default function EntryForm({
         jobs={jobs}
         value={job}
         onChange={setJob}
+        onSearch={onSearchJobs}
         disabled={disabled || submitting}
       />
 
