@@ -5,6 +5,7 @@ import {
   searchRecords,
   insertRecord,
   updateRecord,
+  deleteRecord,
   normalizeRecords,
   isSuccessResponse,
   getResponseId,
@@ -18,7 +19,7 @@ import {
   mockHistory,
   mockOpenedRecord,
 } from "./devMocks.js";
-import { daysAgoLocal, weekStartLocal } from "./timeUtils.js";
+import { daysAgoLocal, toZohoDateTime, weekStartLocal } from "./timeUtils.js";
 
 const { timeEntryModule, jobsModule, timeEntryFields, jobsFields } =
   zohoSchema;
@@ -322,8 +323,8 @@ export async function createTimeEntry({
   const payload = {
     [timeEntryFields.job]: job.id,
     [timeEntryFields.date]: date,
-    [timeEntryFields.startTime]: startTime,
-    [timeEntryFields.endTime]: endTime,
+    [timeEntryFields.startTime]: toZohoDateTime(date, startTime),
+    [timeEntryFields.endTime]: toZohoDateTime(date, endTime),
     [timeEntryFields.totalHours]: totalHours,
     [timeEntryFields.notes]: notes ?? "",
     [timeEntryFields.worker]: userId,
@@ -353,13 +354,13 @@ export async function createTimeEntry({
 }
 
 /** Close an open entry by setting end time and status */
-export async function closeOpenEntry(entryId, endTime, totalHours) {
+export async function closeOpenEntry(entryId, date, endTime, totalHours) {
   if (!isZohoReady()) {
     return { ok: true, id: entryId };
   }
 
   const payload = {
-    [timeEntryFields.endTime]: endTime,
+    [timeEntryFields.endTime]: toZohoDateTime(date, endTime),
     [timeEntryFields.totalHours]: totalHours,
     [timeEntryFields.status]: "closed",
   };
@@ -374,6 +375,32 @@ export async function closeOpenEntry(entryId, endTime, totalHours) {
   if (isSuccessResponse(res)) {
     return { ok: true, id: entryId };
   }
+  return { ok: false, error: getResponseError(res) };
+}
+
+export async function updateTimeEntryStatus(entryId, status) {
+  if (!isZohoReady()) return { ok: true };
+
+  const res = await updateRecord({
+    entity: timeEntryModule,
+    recordId: entryId,
+    data: { [timeEntryFields.status]: status },
+    trigger: ["workflow"],
+  });
+
+  if (isSuccessResponse(res)) return { ok: true };
+  return { ok: false, error: getResponseError(res) };
+}
+
+export async function deleteTimeEntry(entryId) {
+  if (!isZohoReady()) return { ok: true };
+
+  const res = await deleteRecord({
+    entity: timeEntryModule,
+    recordId: entryId,
+  });
+
+  if (isSuccessResponse(res)) return { ok: true };
   return { ok: false, error: getResponseError(res) };
 }
 

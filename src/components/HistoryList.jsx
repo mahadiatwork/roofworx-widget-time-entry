@@ -4,7 +4,10 @@ import StatusBadge from "./StatusBadge.jsx";
 export default function HistoryList({
   entries,
   onSyncNow,
+  onStatusChange,
+  onDelete,
   syncingId = null,
+  editingId = null,
 }) {
   if (!entries.length) {
     return (
@@ -19,20 +22,13 @@ export default function HistoryList({
 
   return (
     <div className="space-y-3">
-      <p
-        className="text-xs"
-        style={{ color: "var(--muted-foreground)" }}
-      >
-        To correct a mistake, edit the time sheet record in CRM — changes cannot
-        be made here.
-      </p>
-
       {entries.map((entry) => {
         const canRetry =
           entry.syncStatus === "failed" ||
           entry.syncStatus === "pending" ||
           entry.syncStatus === "crm_id_missing";
         const isSyncing = syncingId === entry.id;
+        const isEditing = editingId === entry.id;
 
         return (
           <article
@@ -95,7 +91,7 @@ export default function HistoryList({
               </p>
             )}
 
-            <div className="mt-2 flex items-center justify-between gap-2">
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
               {entry.crmId && (
                 <p
                   className="truncate text-xs"
@@ -104,17 +100,42 @@ export default function HistoryList({
                   CRM ref: {entry.crmId}
                 </p>
               )}
-              {canRetry && onSyncNow && (
-                <button
-                  type="button"
-                  onClick={() => onSyncNow(entry)}
-                  disabled={isSyncing}
-                  className="shrink-0 text-xs font-medium underline disabled:opacity-50"
-                  style={{ color: "var(--primary)" }}
-                >
-                  {isSyncing ? "Syncing…" : "Sync now"}
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {onStatusChange && (
+                  <select
+                    value={entry.status}
+                    onChange={(e) => onStatusChange(entry, e.target.value)}
+                    disabled={isEditing}
+                    className="rounded-[var(--radius)] border px-2 py-1 text-xs disabled:opacity-50"
+                    style={{ borderColor: "var(--border)" }}
+                  >
+                    <option value="open">Open</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                )}
+                {canRetry && onSyncNow && (
+                  <button
+                    type="button"
+                    onClick={() => onSyncNow(entry)}
+                    disabled={isSyncing || isEditing}
+                    className="shrink-0 text-xs font-medium underline disabled:opacity-50"
+                    style={{ color: "var(--primary)" }}
+                  >
+                    {isSyncing ? "Syncing…" : "Sync now"}
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    type="button"
+                    onClick={() => onDelete(entry)}
+                    disabled={isEditing}
+                    className="shrink-0 text-xs font-medium underline disabled:opacity-50"
+                    style={{ color: "var(--destructive)" }}
+                  >
+                    {isEditing ? "Working…" : "Delete"}
+                  </button>
+                )}
+              </div>
             </div>
           </article>
         );

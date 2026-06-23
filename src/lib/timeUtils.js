@@ -7,6 +7,9 @@ export function parseTimeToMinutes(timeStr) {
   if (!timeStr) return null;
   const trimmed = timeStr.trim();
 
+  const iso = trimmed.match(/T(\d{2}):(\d{2}):/);
+  if (iso) return parseInt(iso[1], 10) * 60 + parseInt(iso[2], 10);
+
   const ampm = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
   if (ampm) {
     let hours = parseInt(ampm[1], 10);
@@ -53,6 +56,29 @@ export function calculateTotalHours(startTime, endTime) {
   const diffMins = end - start;
   const hours = diffMins / 60;
   return Math.round(hours * 100) / 100;
+}
+
+/** Format local date + time for Zoho DateTime fields: YYYY-MM-DDTHH:mm:ss±HH:MM */
+export function toZohoDateTime(date, time) {
+  const mins = parseTimeToMinutes(time);
+  if (!date || mins === null) return "";
+
+  const hours = Math.floor(mins / 60);
+  const minutes = mins % 60;
+  const d = new Date(`${date}T00:00:00`);
+  d.setHours(hours, minutes, 0, 0);
+
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  const offset = -d.getTimezoneOffset();
+  const sign = offset >= 0 ? "+" : "-";
+  const offsetHours = String(Math.floor(Math.abs(offset) / 60)).padStart(2, "0");
+  const offsetMinutes = String(Math.abs(offset) % 60).padStart(2, "0");
+
+  return `${y}-${m}-${day}T${hh}:${mm}:00${sign}${offsetHours}:${offsetMinutes}`;
 }
 
 /** Today's date as YYYY-MM-DD in local timezone */

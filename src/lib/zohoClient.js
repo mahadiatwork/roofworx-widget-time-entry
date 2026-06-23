@@ -63,6 +63,14 @@ export async function updateRecord({ entity, recordId, data, trigger }) {
   });
 }
 
+export async function deleteRecord({ entity, recordId }) {
+  if (!isZohoReady()) throw new Error("Zoho SDK not ready");
+  return ZOHO.CRM.API.deleteRecord({
+    Entity: entity,
+    RecordID: recordId,
+  });
+}
+
 export async function searchRecords({
   entity,
   type = "criteria",

@@ -15,9 +15,11 @@ import {
   fetchOpenEntry,
   createTimeEntry,
   closeOpenEntry,
+  deleteTimeEntry,
   retrySync,
   getWeeklyHours,
   searchDeals,
+  updateTimeEntryStatus,
 } from "./lib/timeEntryService.js";
 import {
   calculateTotalHours,
@@ -51,6 +53,7 @@ export default function App() {
   const [closeEndTime, setCloseEndTime] = useState("");
   const [closeError, setCloseError] = useState(null);
   const [syncingId, setSyncingId] = useState(null);
+  const [editingHistoryId, setEditingHistoryId] = useState(null);
   const [devMode, setDevMode] = useState(false);
   const [activeTab, setActiveTab] = useState("entry");
 
@@ -108,7 +111,7 @@ export default function App() {
 
         await initZoho(async (pageLoad) => {
           if (cancelled) return;
-          resizeWidget("760px", "660px");
+          resizeWidget("760px", "740px");
 
           const currentUser = await fetchCurrentUser();
           if (cancelled) return;
@@ -189,6 +192,7 @@ export default function App() {
     try {
       const result = await closeOpenEntry(
         openEntry.id,
+        openEntry.date,
         closeEndTime,
         String(totalHours)
       );
@@ -223,6 +227,44 @@ export default function App() {
     }
   }
 
+  async function handleStatusChange(entry, status) {
+    setEditingHistoryId(entry.id);
+    setError(null);
+    try {
+      const result = await updateTimeEntryStatus(entry.id, status);
+      if (!result.ok) {
+        setError(result.error ?? "Failed to update status.");
+        return;
+      }
+      await refreshData(userId, prefilledJob?.id, pageContext);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to update status. Please try again.");
+    } finally {
+      setEditingHistoryId(null);
+    }
+  }
+
+  async function handleDeleteEntry(entry) {
+    if (!window.confirm("Delete this time entry?")) return;
+
+    setEditingHistoryId(entry.id);
+    setError(null);
+    try {
+      const result = await deleteTimeEntry(entry.id);
+      if (!result.ok) {
+        setError(result.error ?? "Failed to delete entry.");
+        return;
+      }
+      await refreshData(userId, prefilledJob?.id, pageContext);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to delete entry. Please try again.");
+    } finally {
+      setEditingHistoryId(null);
+    }
+  }
+
   const weeklyHours = getWeeklyHours(history);
   const showOpenBanner = openEntry && showOpenClock && !confirmation;
   const portalNameField = zohoSchema.portalUserFields?.displayName;
@@ -239,7 +281,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="mx-auto w-full max-w-[620px] p-4">
+      <div className="mx-auto w-full max-w-[700px] p-4">
         <WidgetHeader />
         <div
           className="mt-4 rounded-[var(--radius)] px-4 py-8 text-center text-sm"
@@ -252,7 +294,7 @@ export default function App() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[620px]">
+    <div className="mx-auto w-full max-w-[700px]">
       <WidgetHeader subtitle={headerSubtitle} />
 
       <div className="space-y-4 p-4">
@@ -336,7 +378,10 @@ export default function App() {
           <HistoryList
             entries={history}
             onSyncNow={handleSyncNow}
+            onStatusChange={handleStatusChange}
+            onDelete={handleDeleteEntry}
             syncingId={syncingId}
+            editingId={editingHistoryId}
           />
         )}
       </div>
