@@ -17,6 +17,8 @@ export const zohoSchema = {
 
   /** Time Entry field API names */
   timeEntryFields: {
+    /** Required record name field on Time Sheets */
+    name: "Name",
     /** Lookup to the job record */
     job: "Job",
     /** Date field (date type) */

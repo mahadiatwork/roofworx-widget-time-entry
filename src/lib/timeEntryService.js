@@ -320,7 +320,10 @@ export async function createTimeEntry({
     };
   }
 
+  const entryName = `${job.name ?? job.displayLabel ?? "Time Entry"} - ${date}`
+    .slice(0, 120);
   const payload = {
+    [timeEntryFields.name]: entryName,
     [timeEntryFields.job]: job.id,
     [timeEntryFields.date]: date,
     [timeEntryFields.startTime]: toZohoDateTime(date, startTime),
