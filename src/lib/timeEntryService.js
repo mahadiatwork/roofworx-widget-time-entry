@@ -26,12 +26,15 @@ const { timeEntryModule, jobsModule, timeEntryFields, jobsFields } =
 /** Build a display label for a job record */
 export function formatJobLabel(record) {
   const name = record[jobsFields.name] ?? record.Deal_Name ?? "Unnamed Job";
+  const number = record[jobsFields.proposalNumber] ?? "";
   const street = record[jobsFields.street] ?? "";
   const city = record[jobsFields.city] ?? "";
   const display =
     record[jobsFields.displayAddress] ??
     [street, city].filter(Boolean).join(", ");
-  if (display) return `${display} — ${name}`;
+  const suffix = number ? ` #${number}` : "";
+  if (display) return `${display} — ${name}${suffix}`;
+  if (number) return `${name} #${number}`;
   return name;
 }
 
@@ -40,6 +43,7 @@ export function mapJobRecord(record) {
   return {
     id: record.id,
     name: record[jobsFields.name] ?? record.Deal_Name ?? "",
+    proposalNumber: record[jobsFields.proposalNumber] ?? "",
     street: record[jobsFields.street] ?? "",
     city: record[jobsFields.city] ?? "",
     stage: record[jobsFields.stage] ?? record.Stage ?? "",
@@ -213,18 +217,38 @@ export async function searchDeals(query) {
     return mockJobs.filter((j) =>
       [j.displayLabel, j.name, j.street, j.city].some((value) =>
         value?.toLowerCase().includes(lower)
-      )
+      ) || String(j.proposalNumber ?? "").includes(q)
     );
   }
 
   try {
-    const res = await searchRecords({
-      entity: jobsModule,
-      type: "word",
-      searchValue: q,
-      perPage: 20,
-    });
-    return normalizeRecords(res).map(mapJobRecord);
+    const searches = [
+      searchRecords({
+        entity: jobsModule,
+        query: `(${jobsFields.name}:starts_with:${q})`,
+        perPage: 20,
+      }),
+    ];
+
+    if (/^\d+$/.test(q)) {
+      searches.push(
+        searchRecords({
+          entity: jobsModule,
+          query: `(${jobsFields.proposalNumber}:equals:${q})`,
+          perPage: 20,
+        })
+      );
+    }
+
+    const results = await Promise.allSettled(searches);
+    const jobs = new Map();
+    for (const result of results) {
+      if (result.status !== "fulfilled") continue;
+      normalizeRecords(result.value).forEach((record) => {
+        jobs.set(record.id, mapJobRecord(record));
+      });
+    }
+    return Array.from(jobs.values());
   } catch (err) {
     console.warn("Deal search failed:", err);
     return [];

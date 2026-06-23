@@ -12,6 +12,7 @@ export const mockJobs = [
   {
     id: "5865240000024572057",
     name: "RoofWorx - Office-630 Bonnie Lane-261369",
+    proposalNumber: "261369",
     street: "630 Bonnie Lane",
     city: "Elk Grove Village",
     stage: "In Progress",
@@ -20,6 +21,7 @@ export const mockJobs = [
   {
     id: "5865240000026847005",
     name: "Lenza Residence-13130 Meadowview Ln-261481",
+    proposalNumber: "261481",
     street: "13130 Meadowview Ln",
     city: "Homer Glen",
     stage: "Estimate Requested",
@@ -28,6 +30,7 @@ export const mockJobs = [
   {
     id: "5865240000026839007",
     name: "Cochera Residence-3607 S 59th Ave-261480",
+    proposalNumber: "261480",
     street: "3607 S 59th Ave",
     city: "Cicero",
     stage: "In Progress",

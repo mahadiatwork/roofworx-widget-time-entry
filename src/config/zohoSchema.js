@@ -61,6 +61,7 @@ export const zohoSchema = {
   /** Jobs / Deals field API names */
   jobsFields: {
     name: "Deal_Name",
+    proposalNumber: "Proposal_Number",
     street: "Street",
     city: "City",
     /** Stage or status picklist — used to filter closed-lost jobs */

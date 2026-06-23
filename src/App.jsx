@@ -108,7 +108,7 @@ export default function App() {
 
         await initZoho(async (pageLoad) => {
           if (cancelled) return;
-          resizeWidget("100%", "540px");
+          resizeWidget("760px", "660px");
 
           const currentUser = await fetchCurrentUser();
           if (cancelled) return;
@@ -239,7 +239,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="mx-auto w-full max-w-[540px] p-4">
+      <div className="mx-auto w-full max-w-[620px] p-4">
         <WidgetHeader />
         <div
           className="mt-4 rounded-[var(--radius)] px-4 py-8 text-center text-sm"
@@ -252,7 +252,7 @@ export default function App() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[540px]">
+    <div className="mx-auto w-full max-w-[620px]">
       <WidgetHeader subtitle={headerSubtitle} />
 
       <div className="space-y-4 p-4">
