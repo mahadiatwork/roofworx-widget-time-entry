@@ -59,6 +59,16 @@ function isAllowedJobStage(job) {
   return !zohoSchema.excludedStages.includes(job.stage);
 }
 
+function sortJobs(jobs) {
+  return jobs.sort((a, b) =>
+    (a.displayLabel ?? a.name ?? "").localeCompare(
+      b.displayLabel ?? b.name ?? "",
+      undefined,
+      { sensitivity: "base" }
+    )
+  );
+}
+
 /** Map a Zoho time entry record to a normalized entry object */
 export function mapTimeEntryRecord(record) {
   const jobLookup = record[timeEntryFields.job];
@@ -151,7 +161,7 @@ export async function fetchAssignedJobs(userId, prefilledJobId = null) {
         displayLabel: "Current Job (from record)",
       });
     }
-    return jobs.filter(isAllowedJobStage);
+    return sortJobs(jobs.filter(isAllowedJobStage));
   }
 
   const jobs = new Map();
@@ -226,7 +236,7 @@ export async function fetchAssignedJobs(userId, prefilledJobId = null) {
     }
   }
 
-  return Array.from(jobs.values()).filter(isAllowedJobStage);
+  return sortJobs(Array.from(jobs.values()).filter(isAllowedJobStage));
 }
 
 /** Search Deals/jobs as the worker types */
@@ -271,7 +281,7 @@ export async function searchDeals(query) {
         if (isAllowedJobStage(job)) jobs.set(job.id, job);
       });
     }
-    return Array.from(jobs.values());
+    return sortJobs(Array.from(jobs.values()));
   } catch (err) {
     console.warn("Deal search failed:", err);
     return [];
