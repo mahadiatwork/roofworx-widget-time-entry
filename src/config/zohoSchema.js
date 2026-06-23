@@ -87,7 +87,16 @@ export const zohoSchema = {
   /** Worker email field on Users (only needed if currentUserMatch === "email") */
   workerEmailField: "Email",
 
-  /** Stage values that should NOT appear in the job picker for new entries */
+  /** Stage values that should appear in the job picker for new entries */
+  includedStages: [
+    "Closed Won",
+    "Job Checklist",
+    "Job Scheduled",
+    "Completed",
+    "Invoiced",
+  ],
+
+  /** Stage values that should NOT appear if includedStages is empty */
   excludedStages: ["Closed Lost", "Closed-Lost", "Closed Lost - No Bid"],
 
   /** Default start time shown in the form (24h "HH:MM") */

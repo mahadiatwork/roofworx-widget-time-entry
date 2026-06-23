@@ -52,6 +52,13 @@ export function mapJobRecord(record) {
   };
 }
 
+function isAllowedJobStage(job) {
+  if (zohoSchema.includedStages?.length) {
+    return zohoSchema.includedStages.includes(job.stage);
+  }
+  return !zohoSchema.excludedStages.includes(job.stage);
+}
+
 /** Map a Zoho time entry record to a normalized entry object */
 export function mapTimeEntryRecord(record) {
   const jobLookup = record[timeEntryFields.job];
@@ -144,14 +151,28 @@ export async function fetchAssignedJobs(userId, prefilledJobId = null) {
         displayLabel: "Current Job (from record)",
       });
     }
-    return jobs.filter(
-      (j) => !zohoSchema.excludedStages.includes(j.stage)
-    );
+    return jobs.filter(isAllowedJobStage);
   }
 
   const jobs = new Map();
 
-  if (zohoSchema.linkingModule) {
+  if (zohoSchema.includedStages?.length) {
+    const results = await Promise.allSettled(
+      zohoSchema.includedStages.map((stage) =>
+        searchRecords({
+          entity: jobsModule,
+          query: `(${jobsFields.stage}:equals:${stage})`,
+        })
+      )
+    );
+    for (const result of results) {
+      if (result.status !== "fulfilled") continue;
+      normalizeRecords(result.value).forEach((r) => {
+        const job = mapJobRecord(r);
+        if (isAllowedJobStage(job)) jobs.set(job.id, job);
+      });
+    }
+  } else if (zohoSchema.linkingModule) {
     const { module, jobField, workerField } = zohoSchema.linkingModule;
     const query = `(${workerField}:equals:${userId})`;
     const res = await searchRecords({
@@ -205,7 +226,7 @@ export async function fetchAssignedJobs(userId, prefilledJobId = null) {
     }
   }
 
-  return Array.from(jobs.values());
+  return Array.from(jobs.values()).filter(isAllowedJobStage);
 }
 
 /** Search Deals/jobs as the worker types */
@@ -246,7 +267,8 @@ export async function searchDeals(query) {
     for (const result of results) {
       if (result.status !== "fulfilled") continue;
       normalizeRecords(result.value).forEach((record) => {
-        jobs.set(record.id, mapJobRecord(record));
+        const job = mapJobRecord(record);
+        if (isAllowedJobStage(job)) jobs.set(job.id, job);
       });
     }
     return Array.from(jobs.values());

@@ -15,7 +15,7 @@ export const mockJobs = [
     proposalNumber: "261369",
     street: "630 Bonnie Lane",
     city: "Elk Grove Village",
-    stage: "In Progress",
+    stage: "Closed Won",
     displayLabel: "630 Bonnie Lane, Elk Grove Village — RoofWorx Office",
   },
   {
@@ -24,7 +24,7 @@ export const mockJobs = [
     proposalNumber: "261481",
     street: "13130 Meadowview Ln",
     city: "Homer Glen",
-    stage: "Estimate Requested",
+    stage: "Job Scheduled",
     displayLabel: "13130 Meadowview Ln, Homer Glen — Lenza Residence",
   },
   {
@@ -33,7 +33,7 @@ export const mockJobs = [
     proposalNumber: "261480",
     street: "3607 S 59th Ave",
     city: "Cicero",
-    stage: "In Progress",
+    stage: "Completed",
     displayLabel: "3607 S 59th Ave, Cicero — Cochera Residence",
   },
 ];
