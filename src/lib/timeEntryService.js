@@ -254,7 +254,18 @@ export async function searchDeals(query) {
   }
 
   try {
+    const wordTerms = [...new Set([q, ...q.split(/\s+/)])].filter(
+      (term) => term.length >= 2
+    );
     const searches = [
+      ...wordTerms.map((term) =>
+        searchRecords({
+          entity: jobsModule,
+          type: "word",
+          searchValue: term,
+          perPage: 20,
+        })
+      ),
       searchRecords({
         entity: jobsModule,
         query: `(${jobsFields.name}:starts_with:${q})`,
