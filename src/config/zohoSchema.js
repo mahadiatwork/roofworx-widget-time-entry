@@ -89,6 +89,8 @@ export const zohoSchema = {
 
   /** Stage values that should appear in the job picker for new entries */
   includedStages: [
+    "Estimate Requested",
+    "Proposal Sent",
     "Closed Won",
     "Job Checklist",
     "Job Scheduled",
