@@ -20,17 +20,17 @@ export const zohoSchema = {
     /** Required record name field on Time Sheets */
     name: "Name",
     /** Lookup to the job record */
-    job: "Job",
+    job: "Project",
     /** Date field (date type) */
-    date: "Date",
+    date: "Time_Entry_Date",
     /** Start time (text or datetime — adjust to your org) */
     startTime: "Start_Time",
     /** End time */
     endTime: "End_Time",
     /** Optional notes */
-    notes: "Notes",
+    notes: "Task_Note",
     /** Lookup or owner field for the worker */
-    worker: "Worker",
+    worker: "Roofer",
     /** Decimal/number — calculated by widget, stored in CRM */
     totalHours: "Total_Hours",
     /**
