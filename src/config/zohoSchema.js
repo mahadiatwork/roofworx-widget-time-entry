@@ -8,6 +8,8 @@
 export const zohoSchema = {
   /** API name of the custom Time Entry module */
   timeEntryModule: "Time_Sheets",
+  /** Browser tab path used by Zoho CRM record URLs for Time Sheets */
+  timeEntryTab: "CustomModule3",
 
   /** API name of the module where this widget is opened */
   portalUserModule: "Portal_Users",
@@ -30,7 +32,7 @@ export const zohoSchema = {
     /** Optional notes */
     notes: "Task_Note",
     /** Lookup or owner field for the worker */
-    worker: "Roofer",
+    worker: "Contractor",
     /** Decimal/number — calculated by widget, stored in CRM */
     totalHours: "Total_Hours",
     /**

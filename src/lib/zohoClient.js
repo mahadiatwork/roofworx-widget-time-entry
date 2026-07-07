@@ -32,6 +32,13 @@ export async function resizeWidget(height = "100%", width = "100%") {
   );
 }
 
+export async function closePopupReload() {
+  return safe(
+    () => ZOHO.CRM.UI.Popup.closeReload(),
+    null
+  );
+}
+
 export async function getCurrentUser() {
   return safe(async () => {
     const res = await ZOHO.CRM.CONFIG.getCurrentUser();

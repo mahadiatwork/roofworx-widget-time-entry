@@ -365,6 +365,7 @@ export async function createTimeEntry({
 
   const entryName = `${job.name ?? job.displayLabel ?? "Time Entry"} - ${date}`
     .slice(0, 120);
+  const workerId = portalUserId ?? userId;
   const payload = {
     [timeEntryFields.name]: entryName,
     [timeEntryFields.job]: job.id,
@@ -373,7 +374,7 @@ export async function createTimeEntry({
     [timeEntryFields.endTime]: toZohoDateTime(date, endTime),
     [timeEntryFields.totalHours]: totalHours,
     [timeEntryFields.notes]: notes ?? "",
-    [timeEntryFields.worker]: userId,
+    [timeEntryFields.worker]: { id: workerId },
     [timeEntryFields.createdByWidget]: true,
     [timeEntryFields.status]: status,
     [timeEntryFields.jobName]: job.name ?? job.displayLabel ?? "",
