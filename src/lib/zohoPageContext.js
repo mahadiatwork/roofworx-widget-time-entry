@@ -4,10 +4,19 @@
 
 export function getRecordId(pageLoadData) {
   if (!pageLoadData) return null;
+  const entityRecord = Array.isArray(pageLoadData.Entity)
+    ? pageLoadData.Entity[0]
+    : null;
+  const firstId = (value) => {
+    if (Array.isArray(value)) return value[0]?.id ?? value[0] ?? null;
+    if (value && typeof value === "object") return value.id ?? null;
+    return value ?? null;
+  };
+
   return (
-    pageLoadData.EntityId ||
-    pageLoadData.RecordId ||
-    pageLoadData?.Entity?.[0]?.id ||
+    firstId(pageLoadData.EntityId) ||
+    firstId(pageLoadData.RecordId) ||
+    firstId(entityRecord) ||
     null
   );
 }
