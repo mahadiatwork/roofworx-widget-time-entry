@@ -94,7 +94,11 @@ export function mapTimeEntryRecord(record) {
     date: record[timeEntryFields.date] ?? "",
     startTime: record[timeEntryFields.startTime] ?? "",
     endTime: record[timeEntryFields.endTime] ?? "",
-    totalHours: String(record[timeEntryFields.totalHours] ?? "0"),
+    totalHours: String(
+      record[timeEntryFields.totalHours] ??
+        record[timeEntryFields.totalHoursNumber] ??
+        "0"
+    ),
     notes: record[timeEntryFields.notes] ?? "",
     status: (record[timeEntryFields.status] ?? "closed").toLowerCase(),
     syncStatus,
@@ -371,6 +375,7 @@ export async function createTimeEntry({
   const entryName = `${job.name ?? job.displayLabel ?? "Time Entry"} - ${date}`
     .slice(0, 120);
   const workerId = portalUserId ?? userId;
+  const totalHoursNumber = Number(totalHours);
   const payload = {
     [timeEntryFields.name]: entryName,
     [timeEntryFields.job]: job.id,
@@ -378,6 +383,7 @@ export async function createTimeEntry({
     [timeEntryFields.startTime]: toZohoDateTime(date, startTime),
     [timeEntryFields.endTime]: toZohoDateTime(date, endTime),
     [timeEntryFields.totalHours]: totalHours,
+    [timeEntryFields.totalHoursNumber]: totalHoursNumber,
     [timeEntryFields.notes]: notes ?? "",
     [timeEntryFields.worker]: { id: workerId },
     [timeEntryFields.createdByWidget]: true,
@@ -411,9 +417,11 @@ export async function closeOpenEntry(entryId, date, endTime, totalHours) {
     return { ok: true, id: entryId };
   }
 
+  const totalHoursNumber = Number(totalHours);
   const payload = {
     [timeEntryFields.endTime]: toZohoDateTime(date, endTime),
     [timeEntryFields.totalHours]: totalHours,
+    [timeEntryFields.totalHoursNumber]: totalHoursNumber,
     [timeEntryFields.status]: "closed",
   };
 

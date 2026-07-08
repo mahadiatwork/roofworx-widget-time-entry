@@ -35,6 +35,8 @@ export const zohoSchema = {
     worker: "Contractor",
     /** Decimal/number — calculated by widget, stored in CRM */
     totalHours: "Total_Hours",
+    /** Decimal/number used by Zoho reports */
+    totalHoursNumber: "Total_Hours_Number",
     /**
      * Checkbox — when true, Zoho workflow fires Deluge → Supabase sync.
      * MUST match the checkbox field you create in the Time Entry module.
