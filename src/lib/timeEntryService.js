@@ -78,6 +78,14 @@ export function mapTimeEntryRecord(record) {
     record[timeEntryFields.jobName] ??
     (typeof jobLookup === "object" ? jobLookup?.name : "") ??
     "";
+  const rawSyncStatus = (record[timeEntryFields.syncStatus] ?? "")
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+  const syncStatus = ["failed", "syncing", "crm_id_missing"].includes(rawSyncStatus)
+    ? rawSyncStatus
+    : record.id
+      ? "synced"
+      : "pending";
 
   return {
     id: record.id,
@@ -89,9 +97,7 @@ export function mapTimeEntryRecord(record) {
     totalHours: String(record[timeEntryFields.totalHours] ?? "0"),
     notes: record[timeEntryFields.notes] ?? "",
     status: (record[timeEntryFields.status] ?? "closed").toLowerCase(),
-    syncStatus: (
-      record[timeEntryFields.syncStatus] ?? "pending"
-    ).toLowerCase().replace(/\s+/g, "_"),
+    syncStatus,
     crmId: record.id,
   };
 }
