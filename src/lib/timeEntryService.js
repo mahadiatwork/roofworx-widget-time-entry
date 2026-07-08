@@ -19,7 +19,12 @@ import {
   mockHistory,
   mockOpenedRecord,
 } from "./devMocks.js";
-import { daysAgoLocal, toZohoDateTime, weekStartLocal } from "./timeUtils.js";
+import {
+  calculateTotalHours,
+  daysAgoLocal,
+  toZohoDateTime,
+  weekStartLocal,
+} from "./timeUtils.js";
 
 const { timeEntryModule, jobsModule, timeEntryFields, jobsFields } =
   zohoSchema;
@@ -69,6 +74,20 @@ function sortJobs(jobs) {
   );
 }
 
+function hoursPayload(totalHours) {
+  return {
+    [timeEntryFields.totalHours]: String(totalHours),
+    [timeEntryFields.totalHoursNumber]: Number(totalHours),
+  };
+}
+
+function calculateEntryHours(entry) {
+  const calculated = calculateTotalHours(entry.startTime, entry.endTime);
+  if (calculated !== null) return calculated;
+  const stored = Number(entry.totalHours);
+  return Number.isFinite(stored) ? stored : null;
+}
+
 /** Map a Zoho time entry record to a normalized entry object */
 export function mapTimeEntryRecord(record) {
   const jobLookup = record[timeEntryFields.job];
@@ -81,11 +100,17 @@ export function mapTimeEntryRecord(record) {
   const rawSyncStatus = (record[timeEntryFields.syncStatus] ?? "")
     .toLowerCase()
     .replace(/\s+/g, "_");
-  const syncStatus = ["failed", "syncing", "crm_id_missing"].includes(rawSyncStatus)
+  const syncStatus = [
+    "pending",
+    "failed",
+    "syncing",
+    "crm_id_missing",
+  ].includes(rawSyncStatus)
     ? rawSyncStatus
     : record.id
       ? "synced"
       : "pending";
+  const totalHoursNumber = record[timeEntryFields.totalHoursNumber];
 
   return {
     id: record.id,
@@ -95,10 +120,12 @@ export function mapTimeEntryRecord(record) {
     startTime: record[timeEntryFields.startTime] ?? "",
     endTime: record[timeEntryFields.endTime] ?? "",
     totalHours: String(
-      record[timeEntryFields.totalHours] ??
-        record[timeEntryFields.totalHoursNumber] ??
-        "0"
+      record[timeEntryFields.totalHours] ?? totalHoursNumber ?? "0"
     ),
+    needsHoursNumberUpdate:
+      totalHoursNumber === null ||
+      totalHoursNumber === undefined ||
+      totalHoursNumber === "",
     notes: record[timeEntryFields.notes] ?? "",
     status: (record[timeEntryFields.status] ?? "closed").toLowerCase(),
     syncStatus,
@@ -375,15 +402,13 @@ export async function createTimeEntry({
   const entryName = `${job.name ?? job.displayLabel ?? "Time Entry"} - ${date}`
     .slice(0, 120);
   const workerId = portalUserId ?? userId;
-  const totalHoursNumber = Number(totalHours);
   const payload = {
     [timeEntryFields.name]: entryName,
     [timeEntryFields.job]: job.id,
     [timeEntryFields.date]: date,
     [timeEntryFields.startTime]: toZohoDateTime(date, startTime),
     [timeEntryFields.endTime]: toZohoDateTime(date, endTime),
-    [timeEntryFields.totalHours]: totalHours,
-    [timeEntryFields.totalHoursNumber]: totalHoursNumber,
+    ...hoursPayload(totalHours),
     [timeEntryFields.notes]: notes ?? "",
     [timeEntryFields.worker]: { id: workerId },
     [timeEntryFields.createdByWidget]: true,
@@ -417,11 +442,9 @@ export async function closeOpenEntry(entryId, date, endTime, totalHours) {
     return { ok: true, id: entryId };
   }
 
-  const totalHoursNumber = Number(totalHours);
   const payload = {
     [timeEntryFields.endTime]: toZohoDateTime(date, endTime),
-    [timeEntryFields.totalHours]: totalHours,
-    [timeEntryFields.totalHoursNumber]: totalHoursNumber,
+    ...hoursPayload(totalHours),
     [timeEntryFields.status]: "closed",
   };
 
@@ -464,20 +487,26 @@ export async function deleteTimeEntry(entryId) {
   return { ok: false, error: getResponseError(res) };
 }
 
-/** Re-trigger sync for a failed/pending entry (sets sync status back to pending) */
-export async function retrySync(entryId) {
+/** Re-trigger sync and refresh calculated CRM hour fields */
+export async function retrySync(entry) {
   if (!isZohoReady()) {
     return { ok: true };
   }
 
+  const totalHours = calculateEntryHours(entry);
+  if (totalHours === null) {
+    return { ok: false, error: "Could not calculate total hours." };
+  }
+
   const payload = {
+    ...hoursPayload(totalHours),
     [timeEntryFields.syncStatus]: "pending",
     [timeEntryFields.createdByWidget]: true,
   };
 
   const res = await updateRecord({
     entity: timeEntryModule,
-    recordId: entryId,
+    recordId: entry.id,
     data: payload,
     trigger: ["workflow"],
   });

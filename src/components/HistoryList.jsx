@@ -4,9 +4,11 @@ import StatusBadge from "./StatusBadge.jsx";
 export default function HistoryList({
   entries,
   onSyncNow,
+  onUpdateMissingHours,
   onStatusChange,
   onDelete,
   syncingId = null,
+  updatingMissingHours = false,
   editingId = null,
 }) {
   if (!entries.length) {
@@ -20,15 +22,35 @@ export default function HistoryList({
     );
   }
 
+  const missingHoursCount = entries.filter(
+    (entry) => entry.needsHoursNumberUpdate && entry.crmId
+  ).length;
+
   return (
     <div className="space-y-3">
+      {missingHoursCount > 0 && onUpdateMissingHours && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={onUpdateMissingHours}
+            disabled={updatingMissingHours || !!syncingId}
+            className="rounded-[var(--radius)] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+            style={{ background: "var(--primary)" }}
+          >
+            {updatingMissingHours ? "Updating..." : `Update All (${missingHoursCount})`}
+          </button>
+        </div>
+      )}
+
       {entries.map((entry) => {
         const canRetry =
+          entry.needsHoursNumberUpdate ||
           entry.syncStatus === "failed" ||
           entry.syncStatus === "pending" ||
           entry.syncStatus === "crm_id_missing";
         const isSyncing = syncingId === entry.id;
         const isEditing = editingId === entry.id;
+        const syncLabel = entry.needsHoursNumberUpdate ? "Update CRM" : "Sync now";
 
         return (
           <article
@@ -105,7 +127,7 @@ export default function HistoryList({
                   <select
                     value={entry.status}
                     onChange={(e) => onStatusChange(entry, e.target.value)}
-                    disabled={isEditing}
+                    disabled={isEditing || updatingMissingHours}
                     className="rounded-[var(--radius)] border px-2 py-1 text-xs disabled:opacity-50"
                     style={{ borderColor: "var(--border)" }}
                   >
@@ -117,18 +139,18 @@ export default function HistoryList({
                   <button
                     type="button"
                     onClick={() => onSyncNow(entry)}
-                    disabled={isSyncing || isEditing}
+                    disabled={isSyncing || isEditing || updatingMissingHours}
                     className="shrink-0 text-xs font-medium underline disabled:opacity-50"
                     style={{ color: "var(--primary)" }}
                   >
-                    {isSyncing ? "Syncing…" : "Sync now"}
+                    {isSyncing ? "Updating..." : syncLabel}
                   </button>
                 )}
                 {onDelete && (
                   <button
                     type="button"
                     onClick={() => onDelete(entry)}
-                    disabled={isEditing}
+                    disabled={isEditing || updatingMissingHours}
                     className="shrink-0 text-xs font-medium underline disabled:opacity-50"
                     style={{ color: "var(--destructive)" }}
                   >

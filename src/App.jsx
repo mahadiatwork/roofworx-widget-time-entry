@@ -53,6 +53,7 @@ export default function App() {
   const [closeEndTime, setCloseEndTime] = useState("");
   const [closeError, setCloseError] = useState(null);
   const [syncingId, setSyncingId] = useState(null);
+  const [updatingMissingHours, setUpdatingMissingHours] = useState(false);
   const [editingHistoryId, setEditingHistoryId] = useState(null);
   const [devMode, setDevMode] = useState(false);
   const [activeTab, setActiveTab] = useState("entry");
@@ -214,7 +215,7 @@ export default function App() {
   async function handleSyncNow(entry) {
     setSyncingId(entry.id);
     try {
-      const result = await retrySync(entry.id);
+      const result = await retrySync(entry);
       if (!result.ok) {
         setError(result.error ?? "Sync failed.");
       }
@@ -223,6 +224,39 @@ export default function App() {
       console.error(err);
       setError("Sync failed. Please try again.");
     } finally {
+      setSyncingId(null);
+    }
+  }
+
+  async function handleUpdateMissingHours() {
+    const targets = history.filter(
+      (entry) => entry.needsHoursNumberUpdate && entry.crmId
+    );
+    if (!targets.length) return;
+
+    setUpdatingMissingHours(true);
+    setError(null);
+    let failed = 0;
+
+    try {
+      for (const entry of targets) {
+        setSyncingId(entry.id);
+        try {
+          const result = await retrySync(entry);
+          if (!result.ok) failed += 1;
+        } catch (err) {
+          console.error(err);
+          failed += 1;
+        }
+      }
+      if (failed) {
+        setError(
+          `${failed} time ${failed === 1 ? "entry" : "entries"} failed to update.`
+        );
+      }
+      await refreshData(userId, prefilledJob?.id, pageContext);
+    } finally {
+      setUpdatingMissingHours(false);
       setSyncingId(null);
     }
   }
@@ -378,9 +412,11 @@ export default function App() {
           <HistoryList
             entries={history}
             onSyncNow={handleSyncNow}
+            onUpdateMissingHours={handleUpdateMissingHours}
             onStatusChange={handleStatusChange}
             onDelete={handleDeleteEntry}
             syncingId={syncingId}
+            updatingMissingHours={updatingMissingHours}
             editingId={editingHistoryId}
           />
         )}
