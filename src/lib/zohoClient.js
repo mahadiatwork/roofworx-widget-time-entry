@@ -65,7 +65,7 @@ export async function updateRecord({ entity, recordId, data, trigger }) {
   return ZOHO.CRM.API.updateRecord({
     Entity: entity,
     RecordID: recordId,
-    APIData: data,
+    APIData: { ...data, id: recordId },
     Trigger: trigger ?? ["workflow"],
   });
 }

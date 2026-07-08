@@ -327,8 +327,7 @@ export async function fetchHistory(userId, days = zohoSchema.historyDays) {
 export async function fetchOpenEntry(userId) {
   if (!isZohoReady()) return null;
 
-  const statusField = timeEntryFields.status;
-  const query = workerCriteria(userId, `(${statusField}:equals:open)`);
+  const query = workerCriteria(userId);
 
   try {
     const res = await searchRecords({
@@ -336,7 +335,7 @@ export async function fetchOpenEntry(userId) {
       query,
     });
     const entries = normalizeRecords(res).map(mapTimeEntryRecord);
-    return entries[0] ?? null;
+    return entries.find((entry) => entry.status === "open") ?? null;
   } catch (err) {
     console.error("Failed to check open entry:", err);
     return null;
